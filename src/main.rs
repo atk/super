@@ -22,6 +22,8 @@ extern crate lazy_static;
 extern crate crypto;
 extern crate rustc_serialize;
 extern crate open;
+#[cfg(features = "templates")]
+extern crate handlebars;
 
 mod decompilation;
 mod static_analysis;
