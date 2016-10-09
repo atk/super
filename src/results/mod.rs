@@ -437,8 +437,8 @@ impl Results {
         try!(f.write_all(b"</html>"));
 
         // Copying JS and CSS files
-        try!(copy_folder(config.get_results_template(),
-                         &config.get_results_folder().join(config.get_app_package())));
+        try!(copy_folder(config.get_template_path(),
+                         config.get_results_folder().join(config.get_app_package())));
 
         try!(self.generate_code_html_files(config));
 

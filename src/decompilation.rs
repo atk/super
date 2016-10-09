@@ -82,7 +82,6 @@ pub fn extract_dex(config: &Config, benchmarks: &mut Vec<Benchmark>) {
         }
 
         let start_time = Instant::now();
-
         let zip = ZipArchive::new(match File::open(config.get_apk_file()) {
             Ok(f) => f,
             Err(e) => {
