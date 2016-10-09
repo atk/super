@@ -199,6 +199,10 @@ impl Config {
         self.threads
     }
 
+    pub fn set_threads(&mut self, threads: u8) {
+        self.threads = threads;
+    }
+
     pub fn get_downloads_folder(&self) -> &Path {
         &self.downloads_folder
     }
