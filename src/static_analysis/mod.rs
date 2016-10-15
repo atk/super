@@ -10,7 +10,7 @@ use self::manifest::*;
 use self::certificate::*;
 use self::code::*;
 use results::{Results, Benchmark};
-use {Config, print_error};
+use Config;
 
 pub fn static_analysis(config: &Config, results: &mut Results) {
     if config.is_verbose() {

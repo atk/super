@@ -769,7 +769,7 @@ mod tests {
                    Path::new("/usr/share/super/templates"));
         assert_eq!(config.get_template_path(),
                    Path::new("/usr/share/super/templates/super"));
-        assert_eq!(config.get_template_name(), Path::new("super"));
+        assert_eq!(config.get_template_name(), "super");
         assert_eq!(config.get_rules_json(), Path::new("/etc/super/rules.json"));
         assert_eq!(config.get_unknown_permission_criticity(), Criticity::Low);
         assert_eq!(config.get_unknown_permission_description(),
