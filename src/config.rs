@@ -1,3 +1,7 @@
+//! # SUPER config module
+//!
+//! Handles and configures the initial settings and parameters for SUPER.
+
 use std::{u8, fs};
 use std::path::{Path, PathBuf};
 use std::convert::From;
@@ -16,32 +20,57 @@ use static_analysis::manifest::Permission;
 
 use {Error, Result, Criticity, print_error, print_warning};
 
+/// Largest number of threads permitted.
 const MAX_THREADS: i64 = u8::MAX as i64;
 
+/// Config struct
+///
+/// Contains configuration related fields. It is used for storing the configuration parameters and
+/// checking their values. Implements the `Default` trait.
 #[derive(Debug)]
 pub struct Config {
+    /// Application package.
     app_package: String,
+    /// Boolean to represent `--verbose` mode.
     verbose: bool,
+    /// Boolean to represent `--quiet` mode.
     quiet: bool,
+    /// Boolean to represent `--force` mode.
     force: bool,
+    /// Boolean to represent `--bench` mode.
     bench: bool,
+    /// Boolean to represent `--open` mode.
     open: bool,
+    /// Number of threads.
     threads: u8,
+    /// Folder where the applications are stored.
     downloads_folder: PathBuf,
+    /// Folder with files from analyzed applications.
     dist_folder: PathBuf,
+    /// Folder to store the results of analysis.
     results_folder: PathBuf,
+    /// Path to the Apktool binary.
     apktool_file: PathBuf,
+    /// Path to the Dex2jar binaries.
     dex2jar_folder: PathBuf,
+    /// Path to the JD_CMD binary.
     jd_cmd_file: PathBuf,
+    /// Path to the rules.json file.
     rules_json: PathBuf,
+    /// Path to the results templates folder.
     templates_folder: PathBuf,
+    /// Name of the template to use.
     template: String,
+    /// Represents an unknow permission.
     unknown_permission: (Criticity, String),
+    /// List of permissions to analyze.
     permissions: BTreeSet<PermissionConfig>,
+    /// Checker for the loaded files
     loaded_files: Vec<PathBuf>,
 }
 
 impl Config {
+    /// Creates a new `Config` in Unix systems.
     #[cfg(target_family = "unix")]
     pub fn new<S: AsRef<str>>(app_package: S,
                               verbose: bool,
@@ -70,6 +99,7 @@ impl Config {
         Ok(config)
     }
 
+    /// Creates a new `Config` in Windows systems.
     #[cfg(target_family = "windows")]
     pub fn new<S: AsRef<str>>(app_package: S,
                               verbose: bool,
@@ -94,6 +124,7 @@ impl Config {
         Ok(config)
     }
 
+    /// Checks if all the needed folders and files exist.
     pub fn check(&self) -> bool {
         self.downloads_folder.exists() && self.get_apk_file().exists() &&
         self.apktool_file.exists() && self.dex2jar_folder.exists() &&
@@ -101,6 +132,7 @@ impl Config {
         self.rules_json.exists()
     }
 
+    /// Returns the folders and files that do not exist.
     pub fn get_errors(&self) -> Vec<String> {
         let mut errors = Vec::new();
         if !self.downloads_folder.exists() {
@@ -139,127 +171,158 @@ impl Config {
         errors
     }
 
+    /// Returns the currently loaded config files.
     pub fn get_loaded_config_files(&self) -> VecIter<PathBuf> {
         self.loaded_files.iter()
     }
 
+    /// Returns the app package.
     pub fn get_app_package(&self) -> &str {
         &self.app_package
     }
 
+    /// Changes the app package.
     pub fn set_app_package<S: AsRef<str>>(&mut self, app_package: S) {
         self.app_package = app_package.as_ref().to_owned();
     }
 
+    /// Returns the path to the `.apk`.
     pub fn get_apk_file(&self) -> PathBuf {
         self.downloads_folder.join(format!("{}.apk", self.app_package))
     }
 
+    /// Returns true if the application is running in `--verbose` mode, false otherwise.
     pub fn is_verbose(&self) -> bool {
         self.verbose
     }
 
+    /// Activate or disable `--verbose` mode.
     pub fn set_verbose(&mut self, verbose: bool) {
         self.verbose = verbose;
     }
 
+    /// Returns true if the application is running in `--quiet` mode, false otherwise.
     pub fn is_quiet(&self) -> bool {
         self.quiet
     }
 
+    /// Activate or disable `--quiet` mode.
     pub fn set_quiet(&mut self, quiet: bool) {
         self.quiet = quiet;
     }
 
+    /// Returns true if the application is running in `--force` mode, false otherwise.
     pub fn is_force(&self) -> bool {
         self.force
     }
 
+    /// Activate or disable `--force` mode.
     pub fn set_force(&mut self, force: bool) {
         self.force = force;
     }
 
+    /// Returns true if the application is running in `--bench` mode, false otherwise.
     pub fn is_bench(&self) -> bool {
         self.bench
     }
 
+    /// Activate or disable `--bench` mode.
     pub fn set_bench(&mut self, bench: bool) {
         self.bench = bench;
     }
 
+    /// Returns true if the application is running in `--open` mode, false otherwise.
     pub fn is_open(&self) -> bool {
         self.open
     }
 
+    /// Activate or disable `--open` mode.
     pub fn set_open(&mut self, open: bool) {
         self.open = open;
     }
 
+    /// Returns the `threads` field.
     pub fn get_threads(&self) -> u8 {
         self.threads
     }
 
+    /// Sets the number of threads for the analysis.
     pub fn set_threads(&mut self, threads: u8) {
         self.threads = threads;
     }
 
+    /// Returns the `downloads_folder` field.
     pub fn get_downloads_folder(&self) -> &Path {
         &self.downloads_folder
     }
 
+    /// Returns the `dist_folder` field.
     pub fn get_dist_folder(&self) -> &Path {
         &self.dist_folder
     }
 
+    /// Returns the `results_folder` field.
     pub fn get_results_folder(&self) -> &Path {
         &self.results_folder
     }
 
+    /// Returns the `apktool_file` field.
     pub fn get_apktool_file(&self) -> &Path {
         &self.apktool_file
     }
 
+    /// Returns the `dex2jar_folder` field.
     pub fn get_dex2jar_folder(&self) -> &Path {
         &self.dex2jar_folder
     }
 
+    /// Returns the `jd_cmd_file` field.
     pub fn get_jd_cmd_file(&self) -> &Path {
         &self.jd_cmd_file
     }
 
+    /// Gets the path of the current template.
     pub fn get_template_path(&self) -> PathBuf {
         self.templates_folder.join(&self.template)
     }
 
+    /// Gets the path to the templates folder.
     pub fn get_templates_folder(&self) -> &Path {
         &self.templates_folder
     }
 
+    /// Gets the current template name.
     pub fn get_template_name(&self) -> &str {
         &self.template
     }
 
+    /// Returns the `rules_json` field.
     pub fn get_rules_json(&self) -> &Path {
         &self.rules_json
     }
 
+    /// Returns the criticity of the `unknown_permission` field.
     pub fn get_unknown_permission_criticity(&self) -> Criticity {
         self.unknown_permission.0
     }
 
+    /// Returns the description of the `unknown_permission` field.
     pub fn get_unknown_permission_description(&self) -> &str {
         self.unknown_permission.1.as_str()
     }
 
+    /// Returns the `permissions` field.
     pub fn get_permissions(&self) -> Iter<PermissionConfig> {
         self.permissions.iter()
     }
 
+    /// Loads a configuration file into the `Config` struct.
     fn load_from_file<P: AsRef<Path>>(config: &mut Config, path: P, verbose: bool) -> Result<()> {
         let mut f = try!(fs::File::open(path));
         let mut toml = String::new();
         let _ = try!(f.read_to_string(&mut toml));
 
+        // Parse the configuration file
         let mut parser = Parser::new(toml.as_str());
         let toml = match parser.parse() {
             Some(t) => t,
@@ -271,6 +334,7 @@ impl Config {
             }
         };
 
+        // Read the values from the configuration file
         for (key, value) in toml {
             match key.as_str() {
                 "threads" => {
@@ -532,6 +596,7 @@ impl Config {
         Ok(())
     }
 
+    /// Returns the default `Config` struct.
     fn local_default() -> Config {
         Config {
             app_package: String::new(),
@@ -561,6 +626,7 @@ impl Config {
 }
 
 impl Default for Config {
+    /// Creates the default `Config` struct in Unix systems.
     #[cfg(target_family = "unix")]
     fn default() -> Config {
         let mut config = Config::local_default();
@@ -582,17 +648,26 @@ impl Default for Config {
         config
     }
 
+    /// Creates the default `Config` struct in Windows systems.
     #[cfg(target_family = "windows")]
     fn default() -> Config {
         Config::local_default()
     }
 }
 
+/// PermissionConfig struct
+///
+/// Represents a Permission with all its fields. Implements the `PartialEq` and `PartialOrd`
+/// traits.
 #[derive(Debug, Ord, Eq)]
 pub struct PermissionConfig {
+    /// Permission name.
     permission: Permission,
+    /// Permission criticity.
     criticity: Criticity,
+    /// Permission label.
     label: String,
+    /// Permission description.
     description: String,
 }
 
@@ -615,6 +690,7 @@ impl PartialOrd for PermissionConfig {
 }
 
 impl PermissionConfig {
+    /// Creates a new `PermissionConfig`.
     fn new<S: AsRef<str>>(permission: Permission,
                           criticity: Criticity,
                           label: S,
@@ -628,18 +704,22 @@ impl PermissionConfig {
         }
     }
 
+    /// Returns the `permission` field.
     pub fn get_permission(&self) -> Permission {
         self.permission
     }
 
+    /// Returns the `criticity` field.
     pub fn get_criticity(&self) -> Criticity {
         self.criticity
     }
 
+    /// Returns the `label` field.
     pub fn get_label(&self) -> &str {
         self.label.as_str()
     }
 
+    /// Returns the `description` field.
     pub fn get_description(&self) -> &str {
         self.description.as_str()
     }
@@ -653,10 +733,13 @@ mod tests {
     use std::fs;
     use std::path::Path;
 
+    /// Test for the default configuration function
     #[test]
     fn it_config() {
+        // Create config object
         let mut config: Config = Default::default();
 
+        // Check that the properties of the config object are correct
         assert_eq!(config.get_app_package(), "");
         assert!(!config.is_verbose());
         assert!(!config.is_quiet());
@@ -710,6 +793,7 @@ mod tests {
             fs::create_dir(config.get_results_folder()).unwrap();
         }
 
+        // Change properties
         config.set_app_package("test_app");
         config.set_verbose(true);
         config.set_quiet(true);
@@ -717,6 +801,7 @@ mod tests {
         config.set_bench(true);
         config.set_open(true);
 
+        // Check that the new properties are correct
         assert_eq!(config.get_app_package(), "test_app");
         assert!(config.is_verbose());
         assert!(config.is_quiet());
@@ -749,12 +834,15 @@ mod tests {
         fs::remove_file(config.get_apk_file()).unwrap();
     }
 
+    /// Test for the `config.toml.sample` sample configuration file
     #[test]
     fn it_config_sample() {
+        // Create config object
         let mut config = Config::default();
         Config::load_from_file(&mut config, "config.toml.sample", false).unwrap();
         config.set_app_package("test_app");
 
+        // Check that the properties of the config object are correct
         assert_eq!(config.get_threads(), 2);
         assert_eq!(config.get_downloads_folder(), Path::new("downloads"));
         assert_eq!(config.get_dist_folder(), Path::new("dist"));
