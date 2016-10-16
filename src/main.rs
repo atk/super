@@ -311,9 +311,9 @@ pub struct JSONError {
 
 impl JSONError {
     fn new(code: JSONErrorCode, line: usize, column: usize) -> JSONError {
-        let desc = format!("{:?} at line {} column {}", code, line, column);
-        JSONError { description: desc }
+        JSONError { description: format!("{:?} at line {} column {}", code, line, column) }
     }
+
     fn description(&self) -> &str {
         &self.description
     }
