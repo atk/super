@@ -22,7 +22,6 @@ extern crate lazy_static;
 extern crate crypto;
 extern crate rustc_serialize;
 extern crate open;
-#[cfg(features = "templates")]
 extern crate handlebars;
 
 mod decompilation;
@@ -221,6 +220,8 @@ pub enum Error {
     CodeNotFound,
     Config,
     IOError(io::Error),
+    TemplateNameError(String),
+    TemplateError(Box<handlebars::TemplateError>),
     Unknown,
 }
 
@@ -233,6 +234,8 @@ impl Into<i32> for Error {
             Error::CodeNotFound => 40,
             Error::Config => 50,
             Error::IOError(_) => 100,
+            Error::TemplateNameError(_) => 125,
+            Error::TemplateError(_) => 150,
             Error::Unknown => 1,
         }
     }
@@ -241,6 +244,21 @@ impl Into<i32> for Error {
 impl From<io::Error> for Error {
     fn from(err: io::Error) -> Error {
         Error::IOError(err)
+    }
+}
+
+impl From<handlebars::TemplateFileError> for Error {
+    fn from(err: handlebars::TemplateFileError) -> Error {
+        match err {
+            handlebars::TemplateFileError::TemplateError(e) => e.into(),
+            handlebars::TemplateFileError::IOError(e) => e.into(),
+        }
+    }
+}
+
+impl From<handlebars::TemplateError> for Error {
+    fn from(err: handlebars::TemplateError) -> Error {
+        Error::TemplateError(Box::new(err))
     }
 }
 
@@ -271,6 +289,8 @@ impl StdError for Error {
             Error::CodeNotFound => "the code was not found in the file",
             Error::Config => "there was an error in the configuration",
             Error::IOError(ref e) => e.description(),
+            Error::TemplateNameError(ref e) => e,
+            Error::TemplateError(ref e) => e.description(),
             Error::Unknown => "an unknown error occurred",
         }
     }
@@ -278,6 +298,7 @@ impl StdError for Error {
     fn cause(&self) -> Option<&StdError> {
         match *self {
             Error::IOError(ref e) => Some(e),
+            Error::TemplateError(ref e) => Some(e),
             _ => None,
         }
     }
@@ -285,24 +306,16 @@ impl StdError for Error {
 
 #[derive(Debug)]
 pub struct JSONError {
-    code: JSONErrorCode,
     description: String,
-    line: usize,
-    column: usize,
 }
 
 impl JSONError {
     fn new(code: JSONErrorCode, line: usize, column: usize) -> JSONError {
         let desc = format!("{:?} at line {} column {}", code, line, column);
-        JSONError {
-            code: code,
-            description: desc,
-            line: line,
-            column: column,
-        }
+        JSONError { description: desc }
     }
     fn description(&self) -> &str {
-        self.description.as_str()
+        &self.description
     }
 }
 

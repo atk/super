@@ -10,6 +10,8 @@ use serde_json::builder::ObjectBuilder;
 use chrono::{Local, Datelike};
 use rustc_serialize::hex::ToHex;
 use regex::Regex;
+use handlebars::Handlebars;
+use colored::Colorize;
 
 mod utils;
 
@@ -34,13 +36,14 @@ pub struct Results {
     high: BTreeSet<Vulnerability>,
     critical: BTreeSet<Vulnerability>,
     benchmarks: Vec<Benchmark>,
+    templates: Handlebars,
 }
 
 impl Results {
     pub fn init(config: &Config) -> Option<Results> {
         let path = config.get_results_folder().join(config.get_app_package());
-        if !fs::metadata(&path).is_ok() || config.is_force() {
-            if fs::metadata(&path).is_ok() {
+        if !path.exists() || config.is_force() {
+            if path.exists() {
                 if let Err(e) = fs::remove_dir_all(&path) {
                     print_error(format!("An unknown error occurred when trying to delete the \
                                          results folder: {}",
@@ -49,13 +52,20 @@ impl Results {
                     return None;
                 }
             }
-
             let fingerprint = match FingerPrint::new(config) {
                 Ok(f) => f,
                 Err(e) => {
                     print_error(format!("An error occurred when trying to fingerprint the \
                                          application: {}",
                                         e),
+                                config.is_verbose());
+                    return None;
+                }
+            };
+            let templates = match Results::load_templates(config) {
+                Ok(r) => r,
+                Err(e) => {
+                    print_error(format!("An error occurred when trying to load templates: {}", e),
                                 config.is_verbose());
                     return None;
                 }
@@ -87,6 +97,7 @@ impl Results {
                 } else {
                     Vec::with_capacity(0)
                 },
+                templates: templates,
             })
         } else {
             if config.is_verbose() {
@@ -94,6 +105,35 @@ impl Results {
                           to generate them again.");
             }
             None
+        }
+    }
+
+    fn load_templates(config: &Config) -> Result<Handlebars> {
+        let mut handlebars = Handlebars::new();
+        for dir_entry in try!(fs::read_dir(config.get_template_path())) {
+            let dir_entry = try!(dir_entry);
+            if let Some(ext) = dir_entry.path().extension() {
+                if ext == "hbs" {
+                    try!(handlebars.register_template_file(try!(try!(dir_entry.path()
+                            .file_stem()
+                            .ok_or(Error::TemplateNameError(String::from("template files \
+                                                                          must have a file \
+                                                                          name"))))
+                        .to_str()
+                        .ok_or(Error::TemplateNameError(String::from("template names must be \
+                                                                  unicode")))),
+                                                           dir_entry.path()));
+                }
+            }
+        }
+        if handlebars.get_template("index").is_none() || handlebars.get_template("src").is_none() ||
+           handlebars.get_template("code").is_none() {
+            Err(Error::TemplateNameError(format!("templates must include {}, {} and {} templates",
+                                                 "index".italic(),
+                                                 "src".italic(),
+                                                 "code".italic())))
+        } else {
+            Ok(handlebars)
         }
     }
 
